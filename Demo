@@ -1,0 +1,146 @@
+const AWS = require('aws-sdk');
+const Cognito = new AWS.CognitoIdentityServiceProvider({region: 'us-east-1'});
+const DynamoDb = new AWS.DynamoDB({region: 'us-east-1'});
+"use strict";
+
+exports.handler = async (event) => {
+    let response;
+    let raisedError;
+    let accessToken;
+    
+    if (event.headers) {
+        if (event.headers['Authorization']) {
+            accessToken = event.headers['Authorization'];
+        }
+    }
+    
+    const cognitoRequestParams = {
+        AccessToken: accessToken
+    };
+    
+    let sub;
+    
+    await Cognito.getUser(cognitoRequestParams)
+    .promise().then(data => {
+        if (data && data.UserAttributes) {
+            for (const attribute of data.UserAttributes) {
+                if (attribute.Name == 'sub') {
+                    sub = attribute.Value;
+                    break;
+                }
+            }
+        } 
+    })
+    .catch(err => {
+        raisedError = err;
+    });
+    
+    if (raisedError) {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: raisedError
+            })
+        };
+        return response;
+    }
+    
+    const dynamoDbRequestParams = {
+        TableName: 'Players',
+        Key: {
+            Id: {S: sub}
+        }
+    };
+    
+    let playerData;
+    const playerItem = {};
+
+    await DynamoDb.getItem(dynamoDbRequestParams)
+    .promise().then(data => {
+        if (data && data.Item) {
+           
+            /*var arr0 = str.split(",").join("-");
+            var arr1 = str.split("/(\d+)/g").join("-");
+            var arr = str.replace("S", "nuj");
+            arr = arr.map(function (val) { return +val + 1; });*/
+            
+            playerData = data.Item;
+
+            var str = JSON.stringify(playerData);
+            var str1 = str.replace(sub, "nuj");
+            var r = /\d+/g;
+            var PlayerDatas = str1.match(r);
+            
+            var getFireSpeed = PlayerDatas[0];
+            var getDamage = PlayerDatas[1];
+            var getHop = PlayerDatas[2];
+            var getLosses = PlayerDatas[3];
+            var getMagazine = PlayerDatas[4];
+            var getSpeed = PlayerDatas[5];
+            var getReload = PlayerDatas[6];
+            var getWins = PlayerDatas[7];
+            
+            playerItem.Id    =    {S: sub};
+            playerItem.Wins  =    {N: (parseInt(getWins) + 1).toString()};
+            playerItem.Losses=    {N: (parseInt(getLosses) + 1).toString()};
+            playerItem.Speed =    {N:(parseInt(getSpeed) + 1).toString()};
+            playerItem.FireSpeed= {N:(parseInt(getFireSpeed) + 1).toString()};
+            playerItem.Reload=    {N:(parseInt(getReload) + 1).toString()};
+            playerItem.Damage=    {N:(parseInt(getDamage) + 1).toString()};
+            playerItem.Hop=       {N:(parseInt(getHop) + 1).toString()};
+            playerItem.Magazine=  {N:(parseInt(getMagazine) + 1).toString()};
+            
+        } 
+        response = {
+            statusCode: 200,
+            body: JSON.stringify(getFireSpeed + " , " +getDamage + " , " + getHop + " , " + getLosses + " , " + getMagazine + " , " + getSpeed + " , " + getReload + " , " + getWins)
+        };
+    })
+    .catch(err => {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: err
+            })
+        };
+    });
+    
+    /////////////////////////////////////////////
+    
+      const dynamoDbBatchWriteRequestParams = {
+        RequestItems: {
+            Players: []
+        }
+    };
+             
+                    
+            console.log("NEWDATA: " + playerItem);
+                    
+            dynamoDbBatchWriteRequestParams.RequestItems.Players.push({
+            PutRequest: {
+                Item: playerItem
+            }
+            });
+            
+    const dynamoDbUpdatePlayerStatsPromise = DynamoDb.batchWriteItem(dynamoDbBatchWriteRequestParams).promise();
+    
+    await Promise.all([dynamoDbUpdatePlayerStatsPromise])
+    .then(values => {
+        response = {
+            statusCode: 200,
+            body: JSON.stringify({
+                success: 'New data has been recorded'
+            })
+        };
+    })
+    .catch(err => {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: err
+            })
+        };
+    });
+    
+    return response;
+};
