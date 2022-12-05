@@ -65,17 +65,12 @@ exports.handler = async (event) => {
         }
     }
     
-    if (skillname=="Speed")
-    {
+  
+    
          await DynamoDb.getItem(dynamoDbRequestParams)
     .promise().then(data => {
         if (data && data.Item) {
-           
-            /*var arr0 = str.split(",").join("-");
-            var arr1 = str.split("/(\d+)/g").join("-");
-            var arr = str.replace("S", "nuj");
-            arr = arr.map(function (val) { return +val + 1; });*/
-            
+          
             playerData = data.Item;
 
             var str = JSON.stringify(playerData);
@@ -92,15 +87,43 @@ exports.handler = async (event) => {
             var getReload = PlayerDatas[6];
             var getWins = PlayerDatas[7];
             
+            
+            switch (skillname) {
+              case 'Speed':
+                  getSpeed =  (parseInt(getSpeed) + 1).toString();
+                break;
+                
+              case 'FireSpeed':
+                  getFireSpeed =  (parseInt(getFireSpeed) + 1).toString();
+                break; 
+                 
+              case 'Reload':
+                  getReload =  (parseInt(getReload) + 1).toString();
+                break; 
+                
+              case 'Damage':
+                  getDamage =  (parseInt(getDamage) + 1).toString();
+                break; 
+                
+              case 'Hop':
+                  getHop =  (parseInt(getHop) + 1).toString();
+                break; 
+                
+              case 'Magazine':
+                  getMagazine =  (parseInt(getMagazine) + 1).toString();
+                break; 
+            }
+    
+            
             playerItem.Id    =    {S: sub};
-            playerItem.Wins  =    {N: (parseInt(getWins) + 1).toString()};
-            playerItem.Losses=    {N: (parseInt(getLosses) + 1).toString()};
-            playerItem.Speed =    {N:(parseInt(getSpeed) + 1).toString()};
-            playerItem.FireSpeed= {N:(parseInt(getFireSpeed) + 1).toString()};
-            playerItem.Reload=    {N:(parseInt(getReload) + 1).toString()};
-            playerItem.Damage=    {N:(parseInt(getDamage) + 1).toString()};
-            playerItem.Hop=       {N:(parseInt(getHop) + 1).toString()};
-            playerItem.Magazine=  {N:(parseInt(getMagazine) + 1).toString()};
+            playerItem.Wins  =    {N: (parseInt(getWins)).toString()};
+            playerItem.Losses=    {N: (parseInt(getLosses)).toString()};
+            playerItem.Speed =    {N:(parseInt(getSpeed)).toString()};
+            playerItem.FireSpeed= {N:(parseInt(getFireSpeed)).toString()};
+            playerItem.Reload=    {N:(parseInt(getReload)).toString()};
+            playerItem.Damage=    {N:(parseInt(getDamage)).toString()};
+            playerItem.Hop=       {N:(parseInt(getHop)).toString()};
+            playerItem.Magazine=  {N:(parseInt(getMagazine)).toString()};
             
         } 
         response = {
@@ -154,7 +177,7 @@ exports.handler = async (event) => {
         };
     });
         
-    }
+    
 
    
     
