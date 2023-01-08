@@ -1,0 +1,211 @@
+const AWS = require('aws-sdk');
+const Cognito = new AWS.CognitoIdentityServiceProvider({region: 'us-east-1'});
+const DynamoDb = new AWS.DynamoDB({region: 'us-east-1'});
+"use strict";
+
+exports.handler = async (event) => {
+    let response;
+    let raisedError;
+    let accessToken;
+    
+    if (event.headers) {
+        if (event.headers['Authorization']) {
+            accessToken = event.headers['Authorization'];
+        }
+    }
+    
+    const cognitoRequestParams = {
+        AccessToken: accessToken
+    };
+    
+    let sub;
+    
+    await Cognito.getUser(cognitoRequestParams)
+    .promise().then(data => {
+        if (data && data.UserAttributes) {
+            for (const attribute of data.UserAttributes) {
+                if (attribute.Name == 'sub') {
+                    sub = attribute.Value;
+                    break;
+                }
+            }
+        } 
+    })
+    .catch(err => {
+        raisedError = err;
+    });
+    
+    if (raisedError) {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: raisedError
+            })
+        };
+        return response;
+    }
+    
+    const dynamoDbRequestParams = {
+        TableName: 'Players',
+        Key: {
+            Id: {S: sub}
+        }
+    };
+    
+    ////////////////////////////////////////////
+  
+    let skillname;
+    let playerData;
+    const playerItem = {};
+    
+      
+    if (event.headers) {
+        if (event.headers['SkillName']) {
+            skillname = event.headers['SkillName'];
+        }
+    }
+    
+  
+    
+        await DynamoDb.getItem(dynamoDbRequestParams)
+    .promise().then(data => {
+        if (data && data.Item) {
+          
+            playerData = data.Item;
+
+            var str = JSON.stringify(playerData);
+            var str1 = str.replace(sub, "nuj");
+            var r = /\d+/g;
+            var PlayerDatas = str1.match(r);
+            
+            var getUDamage = PlayerDatas[0];
+            var getDamage = PlayerDatas[1];
+            var getHop = PlayerDatas[2];
+            var getReload = PlayerDatas[3];
+            var getWins = PlayerDatas[4];
+            var getEDamage = PlayerDatas[5];
+            var getFireSpeed = PlayerDatas[6];
+            var getQDamage = PlayerDatas[7];
+            var getLosses = PlayerDatas[8];
+            var getMagazine = PlayerDatas[9];
+            var getSpeed = PlayerDatas[10];
+            var getCharacter = PlayerDatas[11];
+            
+            
+            switch (skillname) {
+              case 'Speed':
+                  getSpeed =  (parseInt(getSpeed) + 30).toString();
+                break;
+                
+              case 'FireSpeed':
+                  getFireSpeed =  (parseInt(getFireSpeed) + 1).toString();
+                break; 
+                 
+              case 'Reload':
+                  getReload =  (parseInt(getReload) + 1).toString();
+                break; 
+                
+              case 'Damage':
+                  getDamage =  (parseInt(getDamage) + 1).toString();
+                break; 
+                
+              case 'Hop':
+                  getHop =  (parseInt(getHop) + 1).toString();
+                break; 
+                
+              case 'Magazine':
+                  getMagazine =  (parseInt(getMagazine) + 1).toString();
+                break; 
+                
+              case 'QDamage':
+                  getQDamage =  (parseInt(getQDamage) + 1).toString();
+                break; 
+                
+              case 'EDamage':
+                  getEDamage =  (parseInt(getEDamage) + 1).toString();
+                break; 
+                
+              case 'UDamage':
+                  getUDamage =  (parseInt(getUDamage) + 1).toString();
+                break; 
+                
+              case 'Character':
+                  getCharacter =  (parseInt(getCharacter) + 1).toString();
+                break; 
+            }
+    
+            
+            playerItem.Id    =    {S: sub};
+            playerItem.Wins  =    {N: getWins};
+            playerItem.Losses=    {N: getLosses};
+            playerItem.Speed =    {N: getSpeed};
+            playerItem.FireSpeed= {N: getFireSpeed};
+            playerItem.Reload=    {N: getReload};
+            playerItem.Damage=    {N: getDamage};
+            playerItem.Hop=       {N: getHop};
+            playerItem.Magazine=  {N: getMagazine};
+            playerItem.QDamage=  {N: getQDamage};
+            playerItem.EDamage=  {N: getEDamage};
+            playerItem.UDamage=  {N: getUDamage};
+            playerItem.Character=  {N: getCharacter};
+              
+            
+        } 
+        response = {
+            statusCode: 200,
+          // body: JSON.stringify(getFireSpeed + " , " +getDamage + " , " +getQDamage + " , " +getEDamage + " , " +getUDamage + " , " + getHop + " , " + getLosses + " , " + getMagazine + " , " + getSpeed + " , " + getReload + " , " + getWins + " , " + getCharacter)
+           body: JSON.stringify(playerData)
+        };
+    })
+    .catch(err => {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: err
+            })
+        };
+    });
+    
+    /////////////////////////////////////////////
+    
+      const dynamoDbBatchWriteRequestParams = {
+        RequestItems: {
+            Players: []
+        }
+    };
+             
+                    
+            console.log("NEWDATA: " + playerItem);
+                    
+            dynamoDbBatchWriteRequestParams.RequestItems.Players.push({
+            PutRequest: {
+                Item: playerItem
+            }
+            });
+            
+    const dynamoDbUpdatePlayerStatsPromise = DynamoDb.batchWriteItem(dynamoDbBatchWriteRequestParams).promise();
+    
+    await Promise.all([dynamoDbUpdatePlayerStatsPromise])
+    .then(values => {
+        response = {
+            statusCode: 200,
+            body: JSON.stringify({
+                success: 'New data has been recorded'
+            })
+        };
+    })
+    .catch(err => {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: err
+            })
+        };
+    });
+        
+    
+
+   
+    
+    return response;
+};
