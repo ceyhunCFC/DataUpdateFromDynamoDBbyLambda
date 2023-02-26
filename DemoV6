@@ -1,0 +1,297 @@
+const AWS = require('aws-sdk');
+const Cognito = new AWS.CognitoIdentityServiceProvider({region: 'us-east-1'});
+const DynamoDb = new AWS.DynamoDB({region: 'us-east-1'});
+"use strict";
+
+exports.handler = async (event) => {
+    let response;
+    let raisedError;
+    let accessToken;
+    
+    if (event.headers) {
+        if (event.headers['Authorization']) {
+            accessToken = event.headers['Authorization'];
+        }
+    }
+    
+    const cognitoRequestParams = {
+        AccessToken: accessToken
+    };
+    
+    let sub;
+    
+    await Cognito.getUser(cognitoRequestParams)
+    .promise().then(data => {
+        if (data && data.UserAttributes) {
+            for (const attribute of data.UserAttributes) {
+                if (attribute.Name == 'sub') {
+                    sub = attribute.Value;
+                    break;
+                }
+            }
+        } 
+    })
+    .catch(err => {
+        raisedError = err;
+    });
+    
+    if (raisedError) {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: raisedError
+            })
+        };
+        return response;
+    }
+    
+    const dynamoDbRequestParams = {
+        TableName: 'Players',
+        Key: {
+            Id: {S: sub}
+        }
+    };
+    
+    ////////////////////////////////////////////
+  
+    let skillname;
+    let CharacterAIndex;
+    let EPointIndex;
+    let playerData;
+    const playerItem = {};
+    
+      
+    if (event.headers) {
+        if (event.headers['SkillName']) {
+            skillname = event.headers['SkillName'];
+        }
+    }
+    
+     if (event.headers) {
+        if (event.headers['CharacterAIndex']) {
+            CharacterAIndex = event.headers['CharacterAIndex'];
+        }
+       
+    }
+  
+    
+        await DynamoDb.getItem(dynamoDbRequestParams)
+    .promise().then(data => {
+        if (data && data.Item) {
+          
+            playerData = data.Item;
+
+            var str = JSON.stringify(playerData);
+            var str1 = str.replace(sub, "nuj");
+            var r = /\d+/g;
+            var PlayerDatas = str1.match(r);
+            
+            var getArmor = PlayerDatas[0];
+            var getCharacterA = PlayerDatas[5];
+            var getCharacterD = PlayerDatas[9];
+            var getCharacterF = PlayerDatas[6]; 
+            var getCharacterS = PlayerDatas[15];
+            var getDamage = PlayerDatas[3];
+            var getEDamage = PlayerDatas[12];
+            var getEPoint = PlayerDatas[13];
+            var getFireSpeed = PlayerDatas[4];
+            var getHop = PlayerDatas[16]; 
+            var getLosses = PlayerDatas[17]; 
+            var getMagazine = PlayerDatas[14];
+            var getMaxRank = PlayerDatas[10];
+            var getQDamage = PlayerDatas[19];
+            var getReload = PlayerDatas[18];
+            var getSpeed = PlayerDatas[1];
+            var getTransfer = PlayerDatas[11]; 
+            var getUDamage = PlayerDatas[8];
+            var getWins = PlayerDatas[7];
+            var getZoom = PlayerDatas[2];
+          
+           
+          
+            
+           
+            
+           
+          
+ 
+         
+            
+            
+            switch (skillname) {
+              case 'Speed':
+                  getSpeed =  (parseInt(getSpeed) + 30).toString();
+                break;
+                
+              case 'FireSpeed':
+                  getFireSpeed =  (parseInt(getFireSpeed) + 1).toString();
+                break; 
+                 
+              case 'Reload':
+                  getReload =  (parseInt(getReload) + 1).toString();
+                break; 
+                
+              case 'Damage':
+                  getDamage =  (parseInt(getDamage) + 1).toString();
+                break; 
+                
+              case 'Hop':
+                  getHop =  (parseInt(getHop) + 1).toString();
+                break; 
+                
+              case 'Magazine':
+                  getMagazine =  (parseInt(getMagazine) + 1).toString();
+                break; 
+                
+              case 'QDamage':
+                  getQDamage =  (parseInt(getQDamage) + 1).toString();
+                break; 
+                
+              case 'EDamage':
+                  getEDamage =  (parseInt(getEDamage) + 1).toString();
+                break; 
+                
+              case 'UDamage':
+                  getUDamage =  (parseInt(getUDamage) + 1).toString();
+                break; 
+                
+              case 'Zoom':
+                  getZoom =  (parseInt(getZoom)+ 1).toString();
+                break; 
+                
+              case 'Armor':
+                  getArmor =  (parseInt(getArmor)+ 1).toString();
+                break; 
+                
+              case 'Transfer':
+                  getTransfer =  (parseInt(getTransfer)+ 1).toString();
+                break; 
+                
+              case 'CharacterA':
+                  getCharacterA =  (parseInt(CharacterAIndex)).toString();
+                break; 
+                
+              case 'CharacterD':
+                  getCharacterD =  (parseInt(CharacterAIndex)).toString();
+                break; 
+                
+              case 'CharacterS':
+                  getCharacterS =  (parseInt(CharacterAIndex)).toString();
+                break; 
+                
+              case 'CharacterF':
+                  getCharacterF =  (parseInt(CharacterAIndex)).toString();
+                break; 
+                
+              case 'MaxRank':
+                  getMaxRank =  (parseInt(getMaxRank)+ 1).toString();
+                break; 
+                
+              case 'EPoint':
+                  getEPoint =   (parseInt(EPointIndex)).toString();
+                break; 
+            }
+    
+            
+            playerItem.Id    =    {S: sub};
+            playerItem.Wins  =    {N: getWins};
+            playerItem.Losses=    {N: getLosses};
+            playerItem.Speed =    {N: getSpeed};
+            playerItem.FireSpeed= {N: getFireSpeed};
+            playerItem.Reload=    {N: getReload};
+            playerItem.Damage=    {N: getDamage};
+            playerItem.Hop=       {N: getHop};
+            playerItem.Magazine=  {N: getMagazine};
+            playerItem.QDamage=  {N: getQDamage};
+            playerItem.EDamage=  {N: getEDamage};
+            playerItem.UDamage=  {N: getUDamage};
+            playerItem.CharacterA=  {N: getCharacterA};
+            playerItem.CharacterD=  {N: getCharacterD};
+            playerItem.CharacterF=  {N: getCharacterF};
+            playerItem.CharacterS=  {N: getCharacterS};
+            playerItem.Zoom=  {N: getZoom};
+            playerItem.Armor=  {N: getArmor};
+            playerItem.Transfer=  {N: getTransfer};
+            playerItem.EPoint=  {N: getEPoint};
+            playerItem.MaxRank=  {N: getMaxRank};
+              
+            
+        } 
+        response = {
+            statusCode: 200,
+             body: JSON.stringify(
+            getArmor + " , " 
+          + getCharacterA + " , " 
+          + getCharacterD + " , " 
+          + getCharacterF + " , " 
+          + getCharacterS + " , " 
+          + getDamage + " , " 
+          + getEDamage + " , " 
+          + getEPoint + " , " 
+          + getFireSpeed + " , " 
+          + getHop + " , " 
+          + getLosses + " , " 
+          + getMagazine+ " , " 
+          + getMaxRank+ " , " 
+          + getQDamage+ " , " 
+          + getReload+ " , " 
+          + getSpeed+ " , " 
+          + getTransfer+ " , " 
+          + getUDamage+ " , " 
+          + getWins+ " , " 
+          + getZoom)
+          // body: JSON.stringify(playerData)
+        };
+    })
+    .catch(err => {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: err
+            })
+        };
+    });
+    
+    /////////////////////////////////////////////
+    
+      const dynamoDbBatchWriteRequestParams = {
+        RequestItems: {
+            Players: []
+        }
+    };
+             
+                    
+            console.log("NEWDATA: " + playerItem);
+                    
+            dynamoDbBatchWriteRequestParams.RequestItems.Players.push({
+            PutRequest: {
+                Item: playerItem
+            }
+            });
+            
+    const dynamoDbUpdatePlayerStatsPromise = DynamoDb.batchWriteItem(dynamoDbBatchWriteRequestParams).promise();
+    
+   /* await Promise.all([dynamoDbUpdatePlayerStatsPromise])
+    .then(values => {
+        response = {
+            statusCode: 200,
+            body: JSON.stringify({
+                success: 'New data has been recorded'
+            })
+        };
+    })
+    .catch(err => {
+        response = {
+            statusCode: 400,
+            body: JSON.stringify({
+                error: err
+            })
+        };
+    });*/
+        
+    
+
+   
+    
+    return response;
+};
